@@ -1,4 +1,8 @@
-var CACHE_STATIC_NAME = 'static-v15';
+// Use to import external files to service worker
+importScripts('/src/js/idb.js');
+importScripts('/src/js/utility.js');
+
+var CACHE_STATIC_NAME = 'static-v18';
 var CACHE_DYNAMIC_NAME = 'dynamic-v2';
 var STATIC_FILES = [
   '/',
@@ -6,6 +10,7 @@ var STATIC_FILES = [
   '/offline.html',
   '/src/js/app.js',
   '/src/js/feed.js',
+  '/src/js/idb.js',
   '/src/js/promise.js',
   '/src/js/fetch.js',
   '/src/js/material.min.js',
@@ -91,12 +96,35 @@ function isInArray(string, array) {
 // Triggered by web application / actual page
 // #region Strategy: Cache-then-Network-&-Dynamic-Caching
 self.addEventListener('fetch', function (event) {
-  var url = 'https://httpbin.org/get';
+  var url = 'https://pwagram-38881.firebaseio.com/posts.json';
 
   // If request url is the same as 'url'
-  // Use cache-then-network strategy
   if (event.request.url.indexOf(url) > -1) {
-    event.respondWith(
+    // return response and store in INDB
+    event.respondWith(fetch(event.request)
+      .then(function (res) {
+        var clonedRes = res.clone();
+        // Clear store first before writing to InDB store
+        clearAllData('posts')
+          .then(function () {
+            return clonedRes.json()
+          })
+          .then(function (data) {
+            // Store data in database per key
+            for (var key in data) {
+              writeData('posts', data[key])
+              // For testing
+              // Delete item from db via ID
+              /*.then(function () {
+                deleteItemFromData('posts', key);
+              });*/
+            }
+          });
+        return res;
+      })
+    );
+    // Use cache-then-network strategy
+    /*event.respondWith(
       // Dynamic caching
       caches.open(CACHE_DYNAMIC_NAME)
         .then(function (cache) {
@@ -105,12 +133,18 @@ self.addEventListener('fetch', function (event) {
             // Intercept fetch and add it to the cache
             .then(function (res) {
               //trimCache(CACHE_DYNAMIC_NAME, 5);
-              cache.put(event.reqesut, res.clone());
+              cache.put(event.request, res.clone());
               // Return the actual response
               return res;
             });
         })
     );
+      event.respondWith(fetch(event.request)
+    .then(function (res) {
+      var respio
+      return res;
+    })
+  );*/
   } else if (isInCache(event.request.url, STATIC_FILES)/*new RegExp('\\b' + STATIC_FILES.join('\\b|\\b') + '\\b').test(event.request.url)*/) {
     // If the request url is contained within the STATIC_FILES array (ie app static files)
     // Implement cache-only strategy
