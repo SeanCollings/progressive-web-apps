@@ -7,6 +7,10 @@ var dbPromise = idb.open('posts-store', 1, function (db) {
     // Create a new object store / a table. 'name', 'primary key'
     db.createObjectStore('posts', { keyPath: 'id' });
   }
+  // ObjectStore to store all the post to be sync'd
+  if (!db.objectStoreNames.contains('sync-posts')) {
+    db.createObjectStore('sync-posts', { keyPath: 'id' });
+  }
 })
 
 // Write data to db

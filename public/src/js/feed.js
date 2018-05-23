@@ -2,6 +2,9 @@ var shareImageButton = document.querySelector('#share-image-button');
 var createPostArea = document.querySelector('#create-post');
 var closeCreatePostModalButton = document.querySelector('#close-create-post-modal-btn');
 var sharedMomentsArea = document.querySelector('#shared-moments');
+var form = document.querySelector('form');
+var titleInput = document.querySelector('#title');
+var locationInput = document.querySelector('#location');
 
 function openCreatePostModal() {
   // createPostArea.style.display = 'block';
@@ -157,3 +160,66 @@ if ('caches' in window) {
       }
     });
 };*/
+
+// Send data to backend - fallback
+function sendData() {
+  fetch('https://us-central1-pwagram-38881.cloudfunctions.net/storePostData', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      id: new Date().toISOString(),
+      title: titleInput.value,
+      location: locationInput.value,
+      image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-38881.appspot.com/o/sf-boat.jpg?alt=media&token=55d96247-08eb-46ab-b9b5-cce2e2108eaf'
+    })
+  })
+    .then(function (res) {
+      console.log('Send data', res);
+      updateUI();
+    });
+}
+
+form.addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  if (titleInput.value.trim() === '' || locationInput.value.trim() === '') {
+    alert('Please enter valid data!');
+    return;
+  }
+
+  closeCreatePostModal();
+
+  // Check if browser supports service workers and sync managers
+  if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    navigator.serviceWorker.ready
+      .then(function (sw) {
+        var post = {
+          id: new Date().toISOString(),
+          title: titleInput.value,
+          location: locationInput.value
+        };
+        // Write post to IndexedDB
+        writeData('sync-posts', post)
+          .then(function () {
+            // Register sync event with the service worker
+            // Choose id param to distinguish between different sync tasks
+            return sw.sync.register('sync-new-posts');
+          })
+          .then(function () {
+            // Show confirmation message (from css library & index.html)
+            var snackbarContainer = document.querySelector('#confirmation-toast');
+            var data = { message: 'Your Post was saved for syncing!' };
+            snackbarContainer.MaterialSnackbar.showSnackbar(data);
+          })
+          .catch(function (err) {
+            console.log(err);
+          });
+      });
+  } else {
+    // If there is no sync manager available, send immediatly
+    sendData();
+  }
+});

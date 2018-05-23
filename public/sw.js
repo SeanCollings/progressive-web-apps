@@ -2,7 +2,7 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-var CACHE_STATIC_NAME = 'static-v22';
+var CACHE_STATIC_NAME = 'static-v24';
 var CACHE_DYNAMIC_NAME = 'dynamic-v2';
 var STATIC_FILES = [
   '/',
@@ -276,3 +276,50 @@ self.addEventListener('fetch', function (event) {
 //#endregion Strategy: Network 1st then Cache fallback
 
 // #endregion Other Strategies
+
+// Will fire when re-establishes connectivity or if online,
+// will fire when a new sync task was registered
+self.addEventListener('sync', function (event) {
+  console.log('[Service Worker] Background syncing', event);
+
+  // If many tags, use a switch statement
+  // Add tags to const file
+  if (event.tag === 'sync-new-posts') {
+    console.log('[Service Worker] Syncing new Posts');
+    // Wait untill all data sent before finishing
+    event.waitUntil(
+      // Read data from InDB
+      readAllData('sync-posts')
+        .then(function (data) {
+          for (let dt of data) {
+            fetch('https://us-central1-pwagram-38881.cloudfunctions.net/storePostData', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify({
+                id: dt.id,
+                title: dt.title,
+                location: dt.location,
+                image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-38881.appspot.com/o/sf-boat.jpg?alt=media&token=55d96247-08eb-46ab-b9b5-cce2e2108eaf'
+              })
+            })
+              .then(function (res) {
+                console.log('Send data', res);
+                // Make sure it was succesfully sync'd to the DB before deleting from InDB
+                if (res.ok) {
+                  res.json()
+                    .then(function (resData) {
+                      deleteItemFromData('sync-posts', resData.id);
+                    })
+                }
+              })
+              .catch(function (err) {
+                console.log('Error while sending data', err);
+              });
+          }
+        })
+    );
+  }
+});
