@@ -277,6 +277,7 @@ self.addEventListener('fetch', function (event) {
 
 // #endregion Other Strategies
 
+
 // Will fire when re-establishes connectivity or if online,
 // will fire when a new sync task was registered
 self.addEventListener('sync', function (event) {
@@ -322,4 +323,85 @@ self.addEventListener('sync', function (event) {
         })
     );
   }
+});
+
+
+// Activated when a user clicks on a notification thrown by the service worker
+self.addEventListener('notificationclick', function (event) {
+  var notification = event.notification;
+  var action = event.action;
+
+  console.log(notification);
+
+  if (action === 'confirm') {
+    console.log('Confirm was chosen');
+    notification.close();
+  } else {
+    console.log(action);
+
+    // Open another page on !confirm
+    event.waitUntil(
+      // all things managed by service worker
+      clients.matchAll()
+        .then(function (clis) {
+          // Find open windows where our application runs in
+          // 'clis' (clients) is just an array
+          var client = clis.find(function (c) {
+            return c.visibilityState === 'visible';
+          });
+
+          // If tap notification
+          if (client !== undefined) {
+            // If browser open, focus to that page on new tab
+            // navigate to url found on notification openUrl
+            client.navigate(notification.data.url);
+            client.focus();
+          } else {
+            // If no browser open, open a new browser/tab with applicaton loaded
+            clients.openWindow(notification.data.url);
+          }
+          notification.close();
+        })
+    );
+  }
+});
+
+
+// Fired when notification was closed / swiped away ie no button selection
+self.addEventListener('notificationclose', function (event) {
+  console.log('Notification was closed', event);
+});
+
+
+// Listen for incoming Push msg
+self.addEventListener('push', function (event) {
+  // If this service worker, on this browser, on this device has a subscription -> then will get it
+  console.log('Push Notification received', event);
+
+  // If there is data on the event to extract
+  var data = {
+    title: 'New',
+    content: 'Something new happened!',
+    openUrl: '/'
+  }; // a fallback message
+
+  if (event.data) {
+    data = JSON.parse(event.data.text());
+  }
+
+  // Send notification
+  var options = {
+    body: data.content,
+    icon: '/src/images/icons/app-icon-96x96.png',
+    badge: '/src/images/icons/app-icon-96x96.png',
+    data: {
+      url: data.openUrl
+    }
+  };
+
+  event.waitUntil(
+    // Active service worker cant show the notification - used to listen to events in bckground,
+    // must use the registration of sw.. part running in browser
+    self.registration.showNotification(data.title, options)
+  );
 });
