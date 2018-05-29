@@ -2,13 +2,14 @@
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
 
-var CACHE_STATIC_NAME = 'static-v24';
-var CACHE_DYNAMIC_NAME = 'dynamic-v2';
+var CACHE_STATIC_NAME = 'static-v40';
+var CACHE_DYNAMIC_NAME = 'dynamic-v3';
 var STATIC_FILES = [
   '/',
   '/index.html',
   '/offline.html',
   '/src/js/app.js',
+  '/src/js/utility.js',
   '/src/js/feed.js',
   '/src/js/idb.js',
   '/src/js/promise.js',
@@ -293,21 +294,21 @@ self.addEventListener('sync', function (event) {
       readAllData('sync-posts')
         .then(function (data) {
           for (let dt of data) {
+            // Send data through as form data
+            var postData = new FormData();
+            postData.append('id', dt.id);
+            postData.append('title', dt.title);
+            postData.append('location', dt.location);
+            postData.append('rawLocationLat', dt.rawLocation.lat);
+            postData.append('rawLocationLng', dt.rawLocation.lng);
+            postData.append('file', dt.picture, dt.id + '.png');
+
             fetch('https://us-central1-pwagram-38881.cloudfunctions.net/storePostData', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              },
-              body: JSON.stringify({
-                id: dt.id,
-                title: dt.title,
-                location: dt.location,
-                image: 'https://firebasestorage.googleapis.com/v0/b/pwagram-38881.appspot.com/o/sf-boat.jpg?alt=media&token=55d96247-08eb-46ab-b9b5-cce2e2108eaf'
-              })
+              body: postData
             })
               .then(function (res) {
-                console.log('Send data', res);
+                console.log('Sent data', res);
                 // Make sure it was succesfully sync'd to the DB before deleting from InDB
                 if (res.ok) {
                   res.json()
