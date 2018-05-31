@@ -11,7 +11,9 @@ if (!window.Promise) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker
     // NEVER CACHE SERVICE WORKER!!!
-    .register('/sw.js', { scope: '/' })
+    // .register('/sw.js', { scope: '/' })
+    // Use workbox generated service-worker
+    .register('/service-worker.js', { scope: '/' })
     .then(function () {
       console.log('Service worker registered!');
     })

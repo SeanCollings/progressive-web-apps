@@ -1,3 +1,12 @@
+
+/* ================================================================ */
+/* ========= NO LONGER USED =============== */
+/* ========= NOW USER service-worker,js === */
+/* ========= FROM WORKBOX ================= */
+/* ================================================================ */
+
+
+
 // Use to import external files to service worker
 importScripts('/src/js/idb.js');
 importScripts('/src/js/utility.js');
